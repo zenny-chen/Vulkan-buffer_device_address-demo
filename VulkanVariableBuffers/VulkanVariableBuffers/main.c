@@ -553,10 +553,7 @@ static VkResult AllocateMemoryAndBuffers(VkDevice device, const VkPhysicalDevice
         return res;
     }
 
-    VkMemoryRequirements deviceMemBufRequirements = {
-        // At least 16-byte aligned which is relative to the GLSL side.
-        .alignment = 16
-    };
+    VkMemoryRequirements deviceMemBufRequirements = { 0 };
     vkGetBufferMemoryRequirements(device, deviceBuffers[1], &deviceMemBufRequirements);
 
     // two memory buffers share one device local memory.
