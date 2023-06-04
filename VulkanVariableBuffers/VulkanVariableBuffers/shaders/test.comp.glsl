@@ -1,5 +1,6 @@
 #version 450
 #extension GL_ARB_gpu_shader_int64 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 #extension GL_EXT_buffer_reference : enable
 #extension GL_EXT_buffer_reference2 : enable
 
