@@ -59,6 +59,8 @@ static VkDevice s_specDevice = VK_NULL_HANDLE;
 static uint32_t s_specQueueFamilyIndex = 0;
 static VkPhysicalDeviceMemoryProperties s_memoryProperties = { 0 };
 
+static PFN_vkGetBufferDeviceAddressEXT s_vkGetBufferDeviceAddressEXT = NULL;
+
 static const char* const s_deviceTypes[] = {
     "Other",
     "Integrated GPU",
@@ -309,8 +311,15 @@ static VkResult InitializeDevice(VkQueueFlagBits queueFlag, VkPhysicalDeviceMemo
 
     if (!supportBufferDeviceAddress)
     {
-        fprintf(stderr, "The current device does not support VK_KHR_buffer_device_address feature! The demo cannot be run!\n");
-        return VK_ERROR_UNKNOWN;
+        printf("The current device does not fully support VK_KHR_buffer_device_address feature!\n");
+
+        // load vkGetBufferDeviceAddressEXT from the current Vulkan device environment
+        s_vkGetBufferDeviceAddressEXT = (PFN_vkGetBufferDeviceAddressEXT)vkGetInstanceProcAddr(s_instance, "vkGetBufferDeviceAddressEXT");
+        if (s_vkGetBufferDeviceAddressEXT == NULL)
+        {
+            fprintf(stderr, "The Vulkan API `vkGetBufferDeviceAddressEXT` cannot be loaded! The demo cannot be run...\n");
+            return VK_ERROR_UNKNOWN;
+        }
     }
 
     VkPhysicalDeviceBufferDeviceAddressFeatures deviceBufferAddresFeatures = {
@@ -335,6 +344,11 @@ static VkResult InitializeDevice(VkQueueFlagBits queueFlag, VkPhysicalDeviceMemo
     }
     if (deviceBufferAddresFeatures.bufferDeviceAddress != VK_FALSE) {
         puts("Support bufferDeviceAddress!");
+    }
+    else
+    {
+        fprintf(stderr, "The current device does not support VK_KHR_buffer_device_address feature! The demo cannot be run...\n");
+        return VK_ERROR_UNKNOWN;
     }
     if (deviceBufferAddresFeatures.bufferDeviceAddressCaptureReplay != VK_FALSE) {
         puts("Support bufferDeviceAddressCaptureReplay!");
@@ -688,11 +702,21 @@ static VkResult AllocateMemoryAndBuffers(VkDevice device, const VkPhysicalDevice
         .pNext = NULL,
         .buffer = deviceBuffers[1]
     };
-    addrMem[0] = vkGetBufferDeviceAddress(device, &addressInfo);
+    if (s_vkGetBufferDeviceAddressEXT != NULL) {
+        addrMem[0] = s_vkGetBufferDeviceAddressEXT(device, &addressInfo);
+    }
+    else {
+        addrMem[0] = vkGetBufferDeviceAddress(device, &addressInfo);
+    }
 
     // Store src device buffer address
     addressInfo.buffer = deviceBuffers[2];
-    addrMem[1] = vkGetBufferDeviceAddress(device, &addressInfo);
+    if (s_vkGetBufferDeviceAddressEXT != NULL) {
+        addrMem[1] = s_vkGetBufferDeviceAddressEXT(device, &addressInfo);
+    }
+    else {
+        addrMem[1] = vkGetBufferDeviceAddress(device, &addressInfo);
+    }
 
     vkUnmapMemory(device, deviceMemories[0]);
 
